@@ -1,4 +1,6 @@
 import boto3
+import time
+from botocore.exceptions import ClientError
 
 ec2 = boto3.resource('ec2')
 
@@ -21,13 +23,14 @@ def attach_volume(instance_id, volume_id, device):
     print res
 
 
-def create_instance(image_id, instance_type, key_name, subnet_id):
+def create_instance(image_id, instance_type, key_name, security_groups, subnet_id):
     instance = ec2.create_instances(
     ImageId=image_id,
     MinCount=1,
     MaxCount=1,
     InstanceType=instance_type,
     KeyName=key_name,
+    SecurityGroupIds=[security_groups],
     SubnetId=subnet_id
     )
     for i in instance:
@@ -67,3 +70,24 @@ def create_snapshot(volume_id):
         VolumeId=volume_id,
         Description="test")
     return snapshot
+
+
+def create_security_group(security_group_name, description, vpc_id, inbound_rules, outbound_rules):
+    group = ec2.create_security_group(
+        GroupName=security_group_name,
+        Description=description,
+        VpcId=vpc_id)
+    time.sleep(10)
+
+    try:
+        for rule in inbound_rules:
+            group.authorize_ingress(
+                IpPermissions=[rule]
+            )
+        for rule in outbound_rules:
+            group.authorize_egress(
+                IpPermissions=[rule]
+            )
+    except ClientError as e:
+        print(e)
+    return group

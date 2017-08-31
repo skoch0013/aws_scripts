@@ -12,7 +12,8 @@ parser.add_argument('--device', type=str, default='/dev/sdj')
 args = parser.parse_args()
 # az = us-east-2a
 
-ebs = create_volume(args.availability_zone, args.size, args.snapshot_id)
-time.sleep(10)
-attach_volume(args.instance_id, ebs.id, args.device)
+if __name__ == "__main__":
+    ebs = create_volume(args.availability_zone, args.size, args.snapshot_id)
+    time.sleep(10)
+    attach_volume(args.instance_id, ebs.id, args.device)
 
