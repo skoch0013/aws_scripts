@@ -1,0 +1,4 @@
+from actions import terminate_all_running_instances
+
+
+terminate_all_running_instances()
