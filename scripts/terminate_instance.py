@@ -1,4 +1,4 @@
-from actions import terminate_instance
+from actions_ec2 import terminate_instance
 import argparse
 
 parser = argparse.ArgumentParser()

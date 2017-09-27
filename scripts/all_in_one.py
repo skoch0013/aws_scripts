@@ -1,6 +1,6 @@
 import argparse
 import time
-from actions import *
+from actions_ec2 import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--image_id', type=str, default='ami-ea87a78f')
@@ -15,37 +15,40 @@ parser.add_argument('--size', type=int, default=2) #gb
 parser.add_argument('--device', type=str, default='/dev/sdj')
 parser.add_argument('--snapshot_id', type=str, default='snap-079ac1f64366bc5b2')
 #sg
-parser.add_argument('--security_group_name', type=str, default='test3')
+parser.add_argument('--security_group_name', type=str, default='test4')
 parser.add_argument('--description', type=str, default='test_sg_allow_ssh')
 parser.add_argument('--vpc_id', type=str, default='vpc-6889c001')
 parser.add_argument('--ingress', type=str, default=
-[{
-    "IpProtocol": "tcp", "IpRanges": [{"CidrIp": "0.0.0.0/0"}], "FromPort":22, "ToPort":22
-},
-    {
-        "IpProtocol": "tcp", "IpRanges": [{"CidrIp": "0.0.0.0/0"}], "FromPort":80, "ToPort":80
+    [{
+        "IpProtocol": "tcp", "IpRanges": [{"CidrIp": "0.0.0.0/0"}], "FromPort":22, "ToPort":22
     },
-    {
-        "IpProtocol": "icmp", "IpRanges": [{"CidrIp": "0.0.0.0/0"}], "FromPort":-1, "ToPort":-1
-    }
-])
+        {
+            "IpProtocol": "tcp", "IpRanges": [{"CidrIp": "0.0.0.0/0"}], "FromPort":80, "ToPort":80
+        },
+        {
+            "IpProtocol": "icmp", "IpRanges": [{"CidrIp": "0.0.0.0/0"}], "FromPort":-1, "ToPort":-1
+        }
+    ])
 parser.add_argument('--egress', type=str, default=[])
-
+parser.add_argument('--tag_name', type=str, default='name')
+parser.add_argument('--tag_value', type=str, default='ksyu_test')
 args = parser.parse_args()
 
 if __name__ == "__main__":
-    #create & attach sg
-    sg = create_security_group(args.security_group_name, args.description, args.vpc_id, args.ingress, args.egress)
+    #create sg
+    sg = create_security_group(
+        args.security_group_name, args.description, args.vpc_id, args.ingress, args.egress, args.tag_name, args.tag_value
+    )
     # instance.modify_attribute(
     #     Groups=[sg.id]
     # )
 
     #create instance
-    instance = create_instance(args.image_id, args.instance_type, args.key_name, sg.id, args.subnet_id)
+    instance = create_instance(args.image_id, args.instance_type, args.key_name, sg.id, args.subnet_id, args.tag_name, args.tag_value)
     instance.wait_until_running()
 
     #create & attach volume
-    ebs = create_volume(args.availability_zone, args.size, args.snapshot_id)
+    ebs = create_volume(args.availability_zone, args.size, args.snapshot_id, args.tag_name, args.tag_value)
     time.sleep(10)
     attach_volume(instance.id, ebs.id, args.device)
 
