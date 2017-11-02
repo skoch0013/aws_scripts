@@ -3,7 +3,7 @@ from actions_ec2 import create_security_group
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--security_group_name', type=str, default='test33')
-parser.add_argument('--description', type=str, default='test_sg_allow_ssh')
+parser.add_argument('--description', type=str, default='test_sg')
 parser.add_argument('--vpc_id', type=str, default='vpc-6889c001')
 parser.add_argument('--ingress', type=str, default=
 [{
@@ -11,6 +11,9 @@ parser.add_argument('--ingress', type=str, default=
   },
   {
     "IpProtocol": "tcp", "IpRanges": [{"CidrIp": "0.0.0.0/0"}], "FromPort":80, "ToPort":80
+  },
+  {
+    "IpProtocol": "tcp", "IpRanges": [{"CidrIp": "0.0.0.0/0"}], "FromPort":8081, "ToPort":8081
   },
   {
     "IpProtocol": "icmp", "IpRanges": [{"CidrIp": "0.0.0.0/0"}], "FromPort":-1, "ToPort":-1
