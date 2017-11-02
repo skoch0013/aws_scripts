@@ -1,0 +1,105 @@
+---
+- name: Fire up apache2, nginx, postgresql
+  hosts: aws
+  remote_user: ubuntu
+  become: yes
+  become_method: sudo
+  gather_facts: false
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+   - name: install python2
+     raw: test -e /usr/bin/python || (sudo apt -y update && sudo apt install -y python-minimal)
+
+   - name: install apache2
+     apt: name=apache2 update_cache=true state=latest
+
+   - name: setup apache2 - make apache2 listen on port {{ http_port }}
+     lineinfile: dest=/etc/apache2/ports.conf regexp="^Listen 80" line="Listen {{ http_port }}" state=present
+
+   - name: apache2 virtualhost on port {{ http_port }}
+     lineinfile: dest=/etc/apache2/sites-available/000-default.conf regexp="^<VirtualHost \*:" line="<VirtualHost *:{{ http_port }}>"
+
+   - name: setup apache2 - create virtual host file
+     template: src=virtualhost.conf dest=/etc/apache2/sites-available/{{ domain }}.conf
+
+   - name: setup apache2 - a2ensite {{ domain }}
+     command: a2ensite {{ domain }}
+
+   - name: stop apache2
+     service: name=apache2 state=stopped
+#     command: service apache2 stop
+
+   - name: install nginx
+     apt: name=nginx state=latest update_cache=true
+
+   - name: setup nginx
+     template: src=nginx.conf dest=/etc/nginx/nginx.conf
+
+   - name: install postgresql
+     apt: name={{ item }} update_cache=true state=latest
+     with_items:
+       - postgresql
+       - postgresql-contrib
+       - libpq-dev
+       - python-psycopg2
+
+   - name: start postgresql
+     service: name=postgresql state=started enabled=yes
+
+   - name: create database
+     sudo_user: postgres
+     postgresql_db: name={{ db_name }}
+                encoding='UTF-8'
+                lc_collate='en_US.UTF-8'
+                lc_ctype='en_US.UTF-8'
+                template='template0'
+                state=present
+
+   - name: grant privileges
+     sudo_user: postgres
+     postgresql_user: db={{ db_name }}
+                  name={{ db_user }}
+                  password={{ db_password }}
+                  priv=ALL
+                  state=present
+
+   - name: restart nginx
+     service: name=nginx state=restarted enabled=yes
+
+   - name: restart apache2
+     service: name=apache2 state=restarted enabled=yes
+#     command: echo "restarting services and wrapping up"
+#     notify: "restart services"
+
+   - name: check the services
+     command: lsof -Pan -i tcp:80-8081
+     register: lsof
+   - debug: var=lsof.stdout_lines
+
+#   - name: check postgresql
+#     sudo_user: postgres
+#     command: psql
+#     register: psql
+#   - debug: var=psql.stdout_lines
+
+#  handlers:
+#   - name: start apache2
+#     service: name=apache2 state=started enabled=yes
+#     listen: "restart services"
+#
+#   - name: restart nginx
+#     service: name=nginx state=restarted enabled=yes
+#     listen: "restart services"
+#
+#   - name: restart postgresql
+#     service: name=postgresql state=restarted enabled=yes
+#     listen: "restart services"
+
+#  roles:
+#    - spinup
+#    - apache2
+#    - nginx
+#    - postgres
+

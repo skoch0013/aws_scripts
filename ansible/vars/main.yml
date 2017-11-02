@@ -1,0 +1,9 @@
+---
+#postgresql
+db_user: dbuser
+db_name: dbname
+db_password: dbpassword
+
+#apache2
+http_port: 8081
+domain: test.test
