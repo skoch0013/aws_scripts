@@ -1,0 +1,33 @@
+---
+- name: check if apache2 started
+  command: service apache2 status
+  register: is_apache_started
+
+- name: stop apache2
+  service: name=apache2 state=stopped
+  when: "'active' in is_apache_started.stdout"
+
+- name: install nginx
+  apt: name=nginx state=latest update_cache=true
+
+- name: setup nginx
+  template: src=nginx.conf dest=/etc/nginx/nginx.conf
+
+- name: setup nginx vhost
+  template: src=nginx_virtualhost.conf dest=/etc/nginx/sites-available/{{ domain }}
+
+- name: check if nginx vhost is enabled
+  command: ls /etc/nginx/sites-enabled/
+  register: nginx_vhosts_enabled
+
+- name: enable nginx vhost
+  command: ln -s /etc/nginx/sites-available/{{ domain }} /etc/nginx/sites-enabled/{{ domain }}
+  when: "'{{ domain }}' not in nginx_vhosts_enabled.stdout"
+
+- name: remove default vhost
+  command: rm /etc/nginx/sites-enabled/default
+  when: "'default' in nginx_vhosts_enabled.stdout"
+  notify: restart nginx
+
+- name: start apache2
+  service: name=apache2 state=started enabled=yes

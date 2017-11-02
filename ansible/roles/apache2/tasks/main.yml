@@ -1,0 +1,50 @@
+---
+   - name: check if apache2 is installed
+     command: dpkg --get-selections
+     register: installed_packages
+
+   - name: install apache2
+     apt: name=apache2 update_cache=true state=latest
+     when: "'apache2' not in installed_packages.stdout"
+
+   - name: setup apache2 - make apache2 listen on port {{ http_port }}
+     lineinfile: dest=/etc/apache2/ports.conf regexp="^Listen 80" line="Listen 127.0.0.1:{{ http_port }}" state=present
+
+   - name: setup apache2 - make apache2 named vhost
+     lineinfile: dest=/etc/apache2/ports.conf line="NameVirtualHost 127.0.0.1:{{ http_port }}" state=present
+
+   - name: setup apache2 - upload vhost conf
+     template: src=virtualhost.conf dest=/etc/apache2/sites-available/{{ domain }}.conf
+
+   - name: remove sample vhost conf
+     file: path=/etc/apache2/sites-available/000-default.conf state=absent
+
+   - name: remove sample vhost conf2
+     file: path=/etc/apache2/sites-enabled/000-default.conf state=absent
+
+   - name: check if document root exists
+     command: ls /var/www/
+     register: document_root
+
+   - name: create document root if not exists
+     file: path=/var/www/{{ domain }} state=directory
+#     command: mkdir /var/www/{{ domain }}
+     when: "'{{ domain }}' not in document_root.stdout"
+
+   - name: upload sample index
+     template: src=index.html dest=/var/www/{{ domain }}/index.html
+
+   - name: check if vhost is already enabled
+     command: apache2ctl -S
+     register: enabled_vhosts
+
+   - name: setup apache2 - a2ensite {{ domain }}
+     command: a2ensite {{ domain }}
+     when: "'{{ domain }}' not in enabled_vhosts.stdout"
+     register: a2ensite_done
+
+   - name: restart apache2
+     service: name=apache2 state=restarted enabled=yes
+     when: a2ensite_done
+
+

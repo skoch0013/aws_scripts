@@ -1,0 +1,4 @@
+---
+- name: install python2
+  raw: test -e /usr/bin/python || (sudo apt -y update && sudo apt install -y python-minimal)
+
